@@ -4,8 +4,8 @@
 
 #define SAMPLES 14
 #define DEBOUNCE_DELAY 500
-#define NPN_FILTER_PIN 9 // Pin to control NPN transistor (RC filter)
-#define PNP_BYPASS_PIN 10 // Pin to control PNP transistor (bypass path)
+#define NPN_FILTER_PIN 9 //Pin to control NPN transistor
+#define PNP_BYPASS_PIN 10 //Pin to control PNP transistor
 
 
 volatile uint8_t sineWave[SAMPLES];
@@ -32,14 +32,14 @@ unsigned long lastDebounceTime = 0;
 void setup() {
   DDRD |= 0b11111100;
   pinMode(8, INPUT_PULLUP);
-  pinMode(NPN_FILTER_PIN, OUTPUT); // Set as output for RC filter
-  pinMode(PNP_BYPASS_PIN, OUTPUT); // Set as output for bypass path
+  pinMode(NPN_FILTER_PIN, OUTPUT);
+  pinMode(PNP_BYPASS_PIN, OUTPUT);
 
-  // Initialize both transistors as OFF
+  //Initialize both transistors as OFF
   digitalWrite(NPN_FILTER_PIN, LOW);
   digitalWrite(PNP_BYPASS_PIN, HIGH);
 
-  // Precompute waveforms
+  //Precompute waveforms
   for (int i = 0; i < SAMPLES; i++) {
     sineWave[i] = (sineTable[i] & 0b11111100);
     squareWave[i] = (i < SAMPLES / 2) ? 63 & 0b11111100 : 0b00000000;
@@ -61,19 +61,19 @@ void setup() {
 }
 
 ISR(TIMER1_COMPA_vect) {
-  
+  //Generate signal
   PORTD = (PORTD & 0b00000011) | pWaveformTable[sampleIndex];
   sampleIndex++;
   if (sampleIndex >= SAMPLES) sampleIndex = 0;
 }
 
 void loop() {
-  
+  //Change frequency
   int potValue = analogRead(A0);
   currentFreq = map(potValue, 0, 1023, 20, 20000);
   OCR1A = (16000000 / SAMPLES / currentFreq) - 1;
   
-  
+  //Change waveform
   if (digitalRead(8) == HIGH && (millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
     waveformType = (waveformType + 1) % 3;
     switch (waveformType) {

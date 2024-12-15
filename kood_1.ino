@@ -49,8 +49,8 @@ void setup() {
 
   noInterrupts();
  
-  TCCR1A = (1 << WGM12); // CTC mode
-  TCCR1B = (1 << WGM12) | (1 << CS10); // No prescaler
+  TCCR1A = (1 << WGM12);
+  TCCR1B = (1 << WGM12) | (1 << CS10);
 
 
   OCR1A = (16000000 / SAMPLES / currentFreq) - 1;

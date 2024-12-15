@@ -2,25 +2,29 @@
 #include <avr/interrupt.h>
 
 #define BITS 4
-#define SAMPLES 16
+#define SAMPLES 14
 #define DEBOUNCE_DELAY 500
-#define NPN_FILTER_PIN 9 //Pin to control NPN transistor (RC filter)
-#define PNP_BYPASS_PIN 10 //Pin to control PNP transistor (bypass path)
+#define NPN_FILTER_PIN 9 //Pin to control NPN transistor
+#define PNP_BYPASS_PIN 10 //Pin to control PNP transistor
 
 volatile uint8_t sineWave[SAMPLES];
 volatile uint8_t squareWave[SAMPLES];
 volatile uint8_t sawtoothWave[SAMPLES];
 
 const uint8_t sineTable[SAMPLES] = {
-  32, 43, 53, 60, 63, 60, 53, 43, 
-  32, 21, 11, 4,  0,  4, 11, 21
+  31, 45, 56, 62, 62, 56, 45, 31, 
+  17, 6, 0,  0,  6,  17
+};
+
+const uint8_t sawTable[SAMPLES] = {
+  8, 12, 16, 20, 24, 28, 32, 36, 
+  40, 44, 48, 52,  56,  60
 };
 
 volatile uint8_t *pWaveformTable;
 volatile int sampleIndex = 0;
-volatile int currentFreq = 20000;
+volatile int currentFreq = 5000;
 volatile int waveformType = 0;
-volatile int delayPerSample = 1;
 unsigned long lastDebounceTime = 0;
 
 void setup() {
@@ -37,7 +41,7 @@ void setup() {
   for (int i = 0; i < SAMPLES; i++) {
     sineWave[i] = (sineTable[i] & 0b11111100);
     squareWave[i] = (i < SAMPLES / 2) ? 63 & 0b11111100 : 0b00000000;
-    sawtoothWave[i] = (i * 4 & 0b11111100);
+    sawtoothWave[i] = (sawTable[i] & 0b11111100);
   }
   pWaveformTable = sineWave;
   
@@ -45,7 +49,7 @@ void setup() {
   
   TCCR1A = 0;                        
   TCCR1B = (1 << WGM12) | (1 << CS12) | (1 << CS10); 
-  OCR1A = 15624;                     
+  OCR1A = 15624; //Interrutps roughly every second                   
   
   TIMSK1 |= (1 << OCIE1A);    
   interrupts();
@@ -56,11 +60,11 @@ void setup() {
 
 
 ISR(TIMER1_COMPA_vect) {
-
+  //Change frequency
   int potValue = analogRead(A0);
   currentFreq = map(potValue, 0, 1023, 1000, 1);
 
-  
+  //Change waveform
   if (digitalRead(8) == HIGH && (millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
     waveformType = (waveformType + 1) % 3;
     switch (waveformType) {
@@ -87,6 +91,7 @@ ISR(TIMER1_COMPA_vect) {
 
 void loop() {
   
+  //Generate signal
   PORTD = (PORTD & 0b00000011) | pWaveformTable[sampleIndex];
   sampleIndex++;
   if (sampleIndex >= SAMPLES) sampleIndex = 0;
